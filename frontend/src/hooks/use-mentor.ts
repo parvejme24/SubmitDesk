@@ -24,6 +24,14 @@ export function useMentorSubmissions(params: ListParams) {
   });
 }
 
+export function useMentorSubmission(id: string | null) {
+  return useQuery({
+    queryKey: qk.mentorDetail(id ?? ""),
+    queryFn: () => api<ApiResponse<MentorSubmission>>(`/mentor/submissions/${id}`).then((r) => r.data),
+    enabled: !!id,
+  });
+}
+
 export function useStats() {
   return useQuery({
     queryKey: qk.stats,

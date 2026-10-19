@@ -44,6 +44,7 @@ The task leaves some things open on purpose. These are the decisions this projec
 | Resubmission after rejection | The owner edits the rejected submission and it goes back to `PENDING` | Realistic flow. Avoids "duplicate" blocking a fixed project |
 | Reject reason | Rejecting **requires** feedback (min 10 chars). Approval feedback is optional | Students need to know why they were rejected |
 | Feedback model | A separate `Feedback` table (full review history) | A resubmitted project keeps its earlier reviews |
+| How does a mentor judge a project? | A **details view** (click a project name or the eye icon) shows the full description, links, student and the whole review history, with Approve/Reject right there | The table truncates descriptions. A mentor shouldn't decide without reading the full submission or seeing why it was rejected before |
 | Who sees which submissions? | Students only see their own. Mentors see all | Data privacy |
 | Pagination | Offset-based (`page`, `limit`, max 50) | Simple, and fits "Page X of Y" |
 | Filters | Server side: `status` (ALL / PENDING / APPROVED / REJECTED), `search` by project name, `sort` (newest / oldest) | The task requires server-side filters. Filter state lives in the URL, so refresh, back and shared links work |
@@ -129,7 +130,7 @@ Blank values count as "not set". The server checks the env with zod at startup a
 
 ### Tests
 
-The backend has 27 API tests in [`backend/tests/`](backend/tests). They cover the rules that matter most:
+The backend has 29 API tests in [`backend/tests/`](backend/tests). They cover the rules that matter most:
 
 - duplicate repos → 409 (including `.git`, trailing `/`, uppercase, and two identical requests racing)
 - RBAC → 401 without a token, 403 for the wrong role, 403 when resubmitting someone else's project
@@ -223,6 +224,7 @@ Base URL: `/api`. Every success response is `{ success: true, message, data, met
 | PATCH | `/submissions/:id/resubmit` | STUDENT (owner) | same as create | 200 | 400, 403, 404, 409, 429 |
 | GET | `/mentor/stats` | MENTOR | — | 200 counts | 401, 403 |
 | GET | `/mentor/submissions` | MENTOR | `?page&limit&status&search&sort` | 200 items + `meta` | 400, 401, 403 |
+| GET | `/mentor/submissions/:id` | MENTOR | — | 200 submission + full review history | 401, 403, 404 |
 | PATCH | `/mentor/submissions/:id/review` | MENTOR | `decision` (`APPROVED`/`REJECTED`), `comment` | 200 | 400, 401, 403, 404, 409 |
 
 Validation rules: the repo URL must be `https://github.com/<user>/<repo>`, the live URL must use `https://`, the description must be 20–1000 characters, and the password must be 8+ characters with an uppercase letter and a number.

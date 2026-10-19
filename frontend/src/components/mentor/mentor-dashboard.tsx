@@ -12,9 +12,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Spinner } from "@/components/ui/spinner";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useMentorSubmissions } from "@/hooks/use-mentor";
-import type { ListParams, StatusFilter as Status } from "@/types";
+import type { ListParams, MentorSubmission, StatusFilter as Status } from "@/types";
 import { Pagination } from "./pagination";
 import { ReviewDialog, type ReviewTarget } from "./review-dialog";
+import { SubmissionDetailsDialog } from "./submission-details-dialog";
 import { StatsCards } from "./stats-cards";
 import { StatusFilter } from "./status-filter";
 import { SubmissionsTable } from "./submissions-table";
@@ -68,6 +69,7 @@ export function MentorDashboard() {
   const [searchInput, setSearchInput] = useState(params.search);
   const debouncedSearch = useDebounce(searchInput.trim(), 400);
   const [reviewTarget, setReviewTarget] = useState<ReviewTarget>(null);
+  const [viewing, setViewing] = useState<MentorSubmission | null>(null);
 
   const { data, isPending, isError, error, refetch, isFetching, isPlaceholderData } = useMentorSubmissions(params);
 
@@ -132,7 +134,7 @@ export function MentorDashboard() {
             animate={{ opacity: isPlaceholderData ? 0.55 : 1, filter: isPlaceholderData ? "blur(1.5px)" : "blur(0px)" }}
             transition={{ duration: 0.25, ease: "easeOut" }}
           >
-            <SubmissionsTable items={data.data} onReview={setReviewTarget} />
+            <SubmissionsTable items={data.data} onReview={setReviewTarget} onView={setViewing} />
           </motion.div>
           <div className="flex items-center gap-2">
             <div className="flex-1">
@@ -143,6 +145,7 @@ export function MentorDashboard() {
         </div>
       )}
 
+      <SubmissionDetailsDialog preview={viewing} onClose={() => setViewing(null)} onReview={setReviewTarget} />
       <ReviewDialog target={reviewTarget} onClose={() => setReviewTarget(null)} />
     </div>
   );

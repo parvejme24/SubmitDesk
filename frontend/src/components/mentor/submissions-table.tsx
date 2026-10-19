@@ -1,6 +1,6 @@
 "use client";
 
-import { CalendarIcon, CheckIcon, ExternalLinkIcon, FolderGit2Icon, XIcon } from "lucide-react";
+import { CalendarIcon, CheckIcon, ExternalLinkIcon, EyeIcon, FolderGit2Icon, XIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { easeOut } from "@/components/motion/primitives";
 import { StatusBadge, statusStyles } from "@/components/shared/status-badge";
@@ -15,7 +15,11 @@ const MotionRow = motion.create(TableRow);
 
 const linkClass = "inline-flex items-center gap-1 text-sm text-primary underline-offset-4 hover:underline";
 
-type Props = { items: MentorSubmission[]; onReview: (t: NonNullable<ReviewTarget>) => void };
+type Props = {
+  items: MentorSubmission[];
+  onReview: (t: NonNullable<ReviewTarget>) => void;
+  onView: (s: MentorSubmission) => void;
+};
 
 const initials = (name: string) =>
   name
@@ -39,17 +43,35 @@ function StudentCell({ student }: { student: MentorSubmission["student"] }) {
   );
 }
 
-function Actions({ s, onReview, full }: { s: MentorSubmission; onReview: Props["onReview"]; full?: boolean }) {
+function Actions({ s, onReview, onView, full }: { s: MentorSubmission; full?: boolean } & Omit<Props, "items">) {
+  const details = (
+    <Button
+      size={full ? "sm" : "icon-sm"}
+      variant={full ? "outline" : "ghost"}
+      onClick={() => onView(s)}
+      aria-label={`View details of ${s.projectName}`}
+      title="View details"
+      className={cn(full && "flex-1")}
+    >
+      <EyeIcon />
+      {full && "Details"}
+    </Button>
+  );
+
   if (s.status !== "PENDING") {
     return (
-      <span className="text-xs text-muted-foreground">
-        Reviewed{s.reviewedBy ? ` by ${s.reviewedBy.name}` : ""}
-        {s.reviewedAt ? ` · ${formatDate(s.reviewedAt)}` : ""}
-      </span>
+      <div className={cn("flex items-center gap-2", full ? "w-full justify-between" : "justify-end")}>
+        <span className="text-xs text-muted-foreground">
+          Reviewed{s.reviewedBy ? ` by ${s.reviewedBy.name}` : ""}
+          {s.reviewedAt ? ` · ${formatDate(s.reviewedAt)}` : ""}
+        </span>
+        {full ? <span className="shrink-0">{details}</span> : details}
+      </div>
     );
   }
   return (
-    <div className={cn("flex gap-2", full ? "w-full" : "justify-end")}>
+    <div className={cn("flex items-center gap-2", full ? "w-full" : "justify-end")}>
+      {details}
       <Button
         size="sm"
         className={cn(full && "flex-1")}
@@ -72,7 +94,7 @@ function Actions({ s, onReview, full }: { s: MentorSubmission; onReview: Props["
 }
 
 /** Table on tablets/desktops, card list on phones. */
-export function SubmissionsTable({ items, onReview }: Props) {
+export function SubmissionsTable({ items, onReview, onView }: Props) {
   return (
     <>
       <div className="hidden overflow-hidden rounded-2xl glass md:block">
@@ -100,9 +122,14 @@ export function SubmissionsTable({ items, onReview }: Props) {
                     className="border-border/50 hover:bg-primary/4"
                   >
                     <TableCell className="max-w-56 py-3.5 pl-5">
-                      <p className="truncate font-medium" title={s.projectName}>
+                      <button
+                        type="button"
+                        onClick={() => onView(s)}
+                        className="block max-w-full truncate text-left font-medium underline-offset-4 hover:text-primary hover:underline"
+                        title={s.projectName}
+                      >
                         {s.projectName}
-                      </p>
+                      </button>
                       <p className="truncate text-xs text-muted-foreground" title={s.description}>
                         {s.description}
                       </p>
@@ -129,7 +156,7 @@ export function SubmissionsTable({ items, onReview }: Props) {
                       {formatDate(s.createdAt)}
                     </TableCell>
                     <TableCell className="pr-5 text-right">
-                      <Actions s={s} onReview={onReview} />
+                      <Actions s={s} onReview={onReview} onView={onView} />
                     </TableCell>
                   </MotionRow>
                 ))}
@@ -153,7 +180,13 @@ export function SubmissionsTable({ items, onReview }: Props) {
               <div className={cn("absolute inset-y-0 left-0 w-1 bg-linear-to-b", statusStyles[s.status].accent)} />
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <h3 className="truncate font-semibold">{s.projectName}</h3>
+                  <button
+                    type="button"
+                    onClick={() => onView(s)}
+                    className="block max-w-full truncate text-left font-semibold hover:text-primary"
+                  >
+                    {s.projectName}
+                  </button>
                   <p className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
                     <CalendarIcon className="size-3" />
                     {formatDate(s.createdAt)}
@@ -186,7 +219,7 @@ export function SubmissionsTable({ items, onReview }: Props) {
                 </a>
               </div>
               <div className="mt-3 border-t border-border/60 pt-3">
-                <Actions s={s} onReview={onReview} full />
+                <Actions s={s} onReview={onReview} onView={onView} full />
               </div>
             </motion.article>
           ))}

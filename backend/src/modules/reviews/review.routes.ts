@@ -12,6 +12,7 @@ reviewRoutes.use(authenticate, authorize("MENTOR"));
 
 reviewRoutes.get("/stats", controller.stats);
 reviewRoutes.get("/submissions", validate(listQuerySchema, "query"), controller.list);
+reviewRoutes.get("/submissions/:id", validate(idParamSchema, "params"), controller.detail);
 reviewRoutes.patch(
   "/submissions/:id/review",
   validate(idParamSchema, "params"),

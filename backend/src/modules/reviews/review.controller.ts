@@ -12,6 +12,11 @@ export const list: RequestHandler = async (_req, res) => {
   sendResponse(res, { message: "Submissions", data: items, meta });
 };
 
+export const detail: RequestHandler = async (_req, res) => {
+  const data = await reviewService.getSubmission(res.locals.params.id);
+  sendResponse(res, { message: "Submission", data });
+};
+
 export const review: RequestHandler = async (req, res) => {
   const data = await reviewService.reviewSubmission(req.user!.id, res.locals.params.id, res.locals.body);
   sendResponse(res, { message: "Review saved", data });

@@ -34,6 +34,24 @@ export async function listSubmissions(q: ListQuery) {
   };
 }
 
+/** One submission with its student and full review history (newest first). */
+export async function getSubmission(id: string) {
+  const submission = await prisma.submission.findUnique({
+    relationLoadStrategy: "join",
+    where: { id },
+    include: {
+      student: { select: { id: true, name: true, email: true } },
+      reviewedBy: { select: { id: true, name: true } },
+      feedbacks: {
+        orderBy: { createdAt: "desc" },
+        select: { id: true, comment: true, decision: true, createdAt: true, mentor: { select: { name: true } } },
+      },
+    },
+  });
+  if (!submission) throw new AppError(404, "Submission not found");
+  return submission;
+}
+
 export async function getStats() {
   const grouped = await prisma.submission.groupBy({ by: ["status"], _count: { _all: true } });
   const stats = { total: 0, PENDING: 0, APPROVED: 0, REJECTED: 0 };

@@ -82,6 +82,35 @@ describe("review", () => {
   });
 });
 
+describe("submission details", () => {
+  it("returns the full submission with its review history, newest first", async () => {
+    const { student, mentor, ids } = await setup();
+    const url = `/api/mentor/submissions/${ids[0]}`;
+    await api()
+      .patch(`${url}/review`)
+      .set(bearer(mentor.token))
+      .send({ decision: "REJECTED", comment: "README is missing setup steps." });
+    await api()
+      .patch(`/api/submissions/${ids[0]}/resubmit`)
+      .set(bearer(student.token))
+      .send({ ...validSubmission("student/project-0"), description: "Added a README with setup steps." });
+    await api().patch(`${url}/review`).set(bearer(mentor.token)).send({ decision: "APPROVED", comment: "Great now!" });
+
+    const res = await api().get(url).set(bearer(mentor.token));
+    expect(res.status).toBe(200);
+    expect(res.body.data.description).toBe("Added a README with setup steps.");
+    expect(res.body.data.student.email).toBe("student@example.com");
+    expect(res.body.data.feedbacks.map((f: { decision: string }) => f.decision)).toEqual(["APPROVED", "REJECTED"]);
+    expect(res.body.data.feedbacks[0].mentor.name).toBe("Test Mentor");
+  });
+
+  it("404 for unknown ids, 403 for students", async () => {
+    const { student, mentor, ids } = await setup();
+    expect((await api().get("/api/mentor/submissions/nope").set(bearer(mentor.token))).status).toBe(404);
+    expect((await api().get(`/api/mentor/submissions/${ids[0]}`).set(bearer(student.token))).status).toBe(403);
+  });
+});
+
 describe("list, filters, pagination and stats", () => {
   it("filters by status on the server and paginates", async () => {
     const { mentor, ids } = await setup(12);
