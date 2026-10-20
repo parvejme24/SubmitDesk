@@ -1,5 +1,12 @@
 import type { NextConfig } from "next";
 
+// On Vercel, fail the build loudly instead of deploying a site whose /api or login is broken.
+if (process.env.VERCEL) {
+  for (const name of ["BACKEND_URL", "JWT_SECRET"]) {
+    if (!process.env[name]) throw new Error(`Missing ${name}: set it in the Vercel project's Environment Variables.`);
+  }
+}
+
 const nextConfig: NextConfig = {
   cacheComponents: true,
   partialPrefetching: true,

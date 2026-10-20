@@ -11,7 +11,8 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
   JWT_SECRET: z.string().min(32, "JWT_SECRET must be at least 32 characters"),
   JWT_EXPIRES_IN: optional(z.string().default("1d")),
-  CLIENT_URL: z.url("CLIENT_URL must be a valid URL"),
+  // Only needed if a browser calls the API directly; the frontend normally proxies /api.
+  CLIENT_URL: optional(z.url("CLIENT_URL must be a valid URL").optional()),
 });
 
 const parsed = envSchema.safeParse(process.env);
