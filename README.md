@@ -99,7 +99,7 @@ npm run dev                 # http://localhost:3000
 | `DATABASE_URL` | `postgresql://user:password@host/db?sslmode=require` | Required |
 | `JWT_SECRET` | 32+ random characters | Required. Generate one with `openssl rand -hex 32` |
 | `JWT_EXPIRES_IN` | `1d` | Optional |
-| `CLIENT_URL` | `http://localhost:3000` | Required. CORS origin |
+| `CLIENT_URL` | `http://localhost:3000` | Optional. CORS origin, only needed if a browser calls the API directly |
 | `SEED_MENTOR_EMAIL` | `mentor@example.com` | Used by the seed script |
 | `SEED_MENTOR_PASSWORD` | `Mentor@12345` | Used by the seed script |
 
@@ -256,9 +256,11 @@ Run `npm run db:deploy` again whenever you add a migration.
 |---|---|
 | Root Directory | `backend` |
 | Framework Preset | Express (detected automatically) |
-| Environment variables | `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN=1d`, `CLIENT_URL` (the frontend URL; set it after step 3 and redeploy) |
+| Environment variables | `DATABASE_URL` (Neon pooled URL), `JWT_SECRET` (32+ chars), `JWT_EXPIRES_IN=1d` |
 
-Vercel runs the Express app as a function (`src/app.ts` default-exports it). `npm install` runs `prisma generate` through the `postinstall` script. Check `https://<backend>.vercel.app/api/health` → `{ "ok": true }`.
+Vercel runs the Express app as one function (`src/app.ts` default-exports it). `npm install` runs `prisma generate` through the `postinstall` script, and [`backend/vercel.json`](backend/vercel.json) pins the function to `cle1` (Cleveland), next to the Neon database in `us-east-2`. Change the region if your database is elsewhere. Check `https://<backend>.vercel.app/api/health` → `{ "ok": true }`.
+
+`CLIENT_URL` is optional: browsers never call the backend directly (everything goes through the frontend's `/api`), so CORS stays closed unless you set it.
 
 ### 3. Frontend project
 
@@ -270,7 +272,7 @@ Import the same repo again as a second project:
 | Framework Preset | Next.js |
 | Environment variables | `BACKEND_URL=https://<backend>.vercel.app`, `JWT_SECRET` (**same** value as the backend) |
 
-Set both variables **before** the first build: the `/api` rewrite is baked in at build time. Then go back to the backend project, set `CLIENT_URL` to the frontend URL and redeploy it.
+Set both variables **before** the first build: the `/api` rewrite is baked in at build time. If either is missing, the build stops with a clear "Missing …" error instead of deploying a broken site. If you change `BACKEND_URL` later, redeploy the frontend.
 
 ### How the two talk
 
