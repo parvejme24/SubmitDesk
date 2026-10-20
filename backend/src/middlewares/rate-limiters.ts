@@ -1,11 +1,16 @@
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { env } from "../config/env.js";
+import { clientIp } from "../lib/client-ip.js";
 
 const json = (message: string) => ({ success: false, message });
+
+// Per-visitor key (see lib/client-ip.ts). ipKeyGenerator groups IPv6 addresses by /56 subnet.
+const byIp = (req: Parameters<typeof clientIp>[0]) => ipKeyGenerator(clientIp(req));
 
 // Default store is in-memory: resets on restart and is not shared between instances.
 // In production with several servers, use a Redis store instead.
 export const globalLimiter = rateLimit({
+  keyGenerator: byIp,
   windowMs: 15 * 60 * 1000,
   limit: 100,
   standardHeaders: "draft-7",
@@ -17,6 +22,7 @@ export const globalLimiter = rateLimit({
 // Login: only FAILED attempts count (wrong password, unknown email). This still stops password
 // guessing, but normal logins (and demo-account clicks) never lock anyone out.
 export const loginLimiter = rateLimit({
+  keyGenerator: byIp,
   windowMs: 15 * 60 * 1000,
   limit: 10,
   skipSuccessfulRequests: true,
@@ -28,6 +34,7 @@ export const loginLimiter = rateLimit({
 
 // Signup: every attempt counts, so one IP can't mass-create accounts.
 export const signupLimiter = rateLimit({
+  keyGenerator: byIp,
   windowMs: 15 * 60 * 1000,
   limit: 10,
   standardHeaders: "draft-7",

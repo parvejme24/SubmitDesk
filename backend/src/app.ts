@@ -25,3 +25,6 @@ app.use("/api", router);
 
 app.use(notFound);
 app.use(errorHandler);
+
+// Vercel runs the app as a function and looks for a default export.
+export default app;

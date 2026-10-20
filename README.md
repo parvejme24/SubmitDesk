@@ -130,13 +130,14 @@ Blank values count as "not set". The server checks the env with zod at startup a
 
 ### Tests
 
-The backend has 29 API tests in [`backend/tests/`](backend/tests). They cover the rules that matter most:
+The backend has 31 API tests in [`backend/tests/`](backend/tests). They cover the rules that matter most:
 
 - duplicate repos → 409 (including `.git`, trailing `/`, uppercase, and two identical requests racing)
 - RBAC → 401 without a token, 403 for the wrong role, 403 when resubmitting someone else's project
 - two mentors reviewing the same submission at once → one 200, one 409, and only one feedback row
 - signup can never create a mentor, and login doesn't reveal whether an email exists
 - server-side filters, search, pagination and stats
+- a forged client-IP header is ignored (rate limits can't be dodged)
 
 The tests use a **separate local database**, never the one in `.env`, and refuse to run unless its name contains `test`:
 
@@ -231,17 +232,53 @@ Validation rules: the repo URL must be `https://github.com/<user>/<repo>`, the l
 
 ---
 
-## Deployment
+## Deployment (Vercel + Neon)
 
-| Part | Where | Notes |
-|---|---|---|
-| Database | Neon | Migrations run on every backend deploy. Seed once with `npm run db:seed` |
-| Backend | Render | [`render.yaml`](render.yaml) is a ready blueprint: **New → Blueprint** → pick the repo, then fill in the secret env vars. Build: `npm ci --include=dev && npx prisma migrate deploy && npm run build` · Start: `npm start` |
-| Frontend | Vercel | Root directory `frontend`. Set `BACKEND_URL` (the Render URL) and `JWT_SECRET` (same as the backend) **before** building: the rewrite is baked in at build time |
+Both apps deploy to Vercel as **two projects from this one repo**. The database is Neon.
 
-After the first deploy, set the backend's `CLIENT_URL` to the Vercel URL and redeploy.
+### 1. Database (Neon)
 
-Because the browser only talks to the frontend's `/api`, the cookie stays first-party and `sameSite: "lax"` keeps working in production.
+Use Neon's **pooled** connection string (host contains `-pooler`): serverless functions open many short-lived connections. Apply migrations and seed once from your machine:
+
+```bash
+cd backend
+npm run db:deploy   # with DATABASE_URL pointing at Neon
+npm run db:seed
+```
+
+Run `npm run db:deploy` again whenever you add a migration.
+
+### 2. Backend project
+
+**Vercel → Add New → Project → import the repo**, then:
+
+| Setting | Value |
+|---|---|
+| Root Directory | `backend` |
+| Framework Preset | Express (detected automatically) |
+| Environment variables | `DATABASE_URL`, `JWT_SECRET`, `JWT_EXPIRES_IN=1d`, `CLIENT_URL` (the frontend URL; set it after step 3 and redeploy) |
+
+Vercel runs the Express app as a function (`src/app.ts` default-exports it). `npm install` runs `prisma generate` through the `postinstall` script. Check `https://<backend>.vercel.app/api/health` → `{ "ok": true }`.
+
+### 3. Frontend project
+
+Import the same repo again as a second project:
+
+| Setting | Value |
+|---|---|
+| Root Directory | `frontend` |
+| Framework Preset | Next.js |
+| Environment variables | `BACKEND_URL=https://<backend>.vercel.app`, `JWT_SECRET` (**same** value as the backend) |
+
+Set both variables **before** the first build: the `/api` rewrite is baked in at build time. Then go back to the backend project, set `CLIENT_URL` to the frontend URL and redeploy it.
+
+### How the two talk
+
+The browser only calls the frontend's `/api/*`, which Next.js rewrites to the backend. So the auth cookie stays first-party on the frontend domain and `sameSite: "lax"` works.
+
+One catch: behind that hop, Vercel shows the backend the **frontend's** IP for every visitor, because Vercel overwrites `X-Forwarded-For`. All visitors would share one rate-limit bucket. To avoid that, `proxy.ts` forwards the visitor's IP in `x-client-ip`, signed with HMAC-SHA256 using the shared `JWT_SECRET`. The backend uses it only when the signature is valid ([`lib/client-ip.ts`](backend/src/lib/client-ip.ts)), so a client can't fake it.
+
+> Rate-limit counters are in memory, so on serverless each function instance keeps its own counts. That's fine for spam protection here. For strict global limits, use a shared store like Upstash Redis.
 
 ---
 
