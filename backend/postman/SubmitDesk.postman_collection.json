@@ -72,7 +72,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Test Student\",\n  \"email\": \"test.student@example.com\",\n  \"password\": \"Password1\"\n}"
+              "raw": "{\n  \"name\": \"Farhan Kabir\",\n  \"email\": \"farhan.kabir@submitdesk.dev\",\n  \"password\": \"Password1\"\n}"
             },
             "auth": {
               "type": "noauth"
@@ -113,7 +113,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"student1@example.com\",\n  \"password\": \"Student@12345\"\n}"
+              "raw": "{\n  \"email\": \"nadia.islam@submitdesk.dev\",\n  \"password\": \"SubmitDesk@2026\"\n}"
             },
             "auth": {
               "type": "noauth"
@@ -154,7 +154,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"email\": \"mentor@example.com\",\n  \"password\": \"Mentor@12345\"\n}"
+              "raw": "{\n  \"email\": \"tanvir.ahmed@submitdesk.dev\",\n  \"password\": \"SubmitDesk@2026\"\n}"
             },
             "auth": {
               "type": "noauth"

@@ -49,7 +49,7 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         </FadeIn>
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
           <CheckCircle2Icon className="size-4 text-primary" aria-hidden />
-          Demo accounts for both roles are on the login form.
+          Sign in with one click as a mentor or a student.
         </p>
       </aside>
 

@@ -5,13 +5,16 @@ import { PrismaClient, type SubmissionStatus } from "../src/generated/prisma/cli
 
 const prisma = new PrismaClient({ adapter: new PrismaPg({ connectionString: process.env.DATABASE_URL! }) });
 
-const DEMO_STUDENT_PASSWORD = "Student@12345";
+const STUDENT_PASSWORD = "Student@12345";
 
-// Public one-click demo accounts (shown on the login page). Keep in sync with frontend/src/lib/demo.ts
-const DEMO_ACCOUNTS = [
-  { name: "Demo Mentor", email: "mentor.demo@submitdesk.dev", password: "Demo@12345", role: "MENTOR" },
-  { name: "Demo Student", email: "student.demo@submitdesk.dev", password: "Demo@12345", role: "STUDENT" },
+// One-click sign-in accounts (buttons on the login page). Keep in sync with frontend/src/lib/quick-login.ts
+const QUICK_ACCOUNTS = [
+  { name: "Tanvir Ahmed", email: "tanvir.ahmed@submitdesk.dev", password: "SubmitDesk@2026", role: "MENTOR" },
+  { name: "Nadia Islam", email: "nadia.islam@submitdesk.dev", password: "SubmitDesk@2026", role: "STUDENT" },
 ] as const;
+
+const emailFor = (name: string) => `${name.toLowerCase().replace(/\s+/g, ".")}@submitdesk.dev`;
+const handleFor = (name: string) => name.toLowerCase().replace(/\s+/g, "");
 
 const projects = [
   "Todo App", "Weather Dashboard", "Portfolio Site", "E-commerce Store", "Chat App",
@@ -35,31 +38,31 @@ async function main() {
   });
   console.log(`✔ Mentor: ${mentor.email}`);
 
-  const studentHash = await bcrypt.hash(DEMO_STUDENT_PASSWORD, 10);
+  const studentHash = await bcrypt.hash(STUDENT_PASSWORD, 10);
   const students = await Promise.all(
     ["Rahim Uddin", "Karim Hasan", "Nusrat Jahan", "Tania Akter", "Sabbir Ahmed"].map((name, i) =>
       prisma.user.upsert({
-        where: { email: `student${i + 1}@example.com` },
+        where: { email: emailFor(name) },
         update: {},
-        create: { name, email: `student${i + 1}@example.com`, passwordHash: studentHash },
+        create: { name, email: emailFor(name), passwordHash: studentHash },
       }),
     ),
   );
-  console.log(`✔ ${students.length} demo students (password: ${DEMO_STUDENT_PASSWORD})`);
+  console.log(`✔ ${students.length} students (password: ${STUDENT_PASSWORD})`);
 
-  const demo: Record<string, string> = {};
-  for (const a of DEMO_ACCOUNTS) {
+  const quick: Record<string, string> = {};
+  for (const a of QUICK_ACCOUNTS) {
     const user = await prisma.user.upsert({
       where: { email: a.email },
       update: { role: a.role },
       create: { name: a.name, email: a.email, passwordHash: await bcrypt.hash(a.password, 10), role: a.role },
     });
-    demo[a.role] = user.id;
+    quick[a.role] = user.id;
   }
-  console.log(`✔ Demo accounts: ${DEMO_ACCOUNTS.map((a) => a.email).join(", ")} (password: Demo@12345)`);
+  console.log(`✔ Quick sign-in accounts: ${QUICK_ACCOUNTS.map((a) => a.email).join(", ")}`);
 
-  // A few projects for the demo student, one in each status.
-  const demoProjects: { name: string; slug: string; status: SubmissionStatus; mark?: number; comment?: string }[] = [
+  // A few projects for the quick sign-in student, one in each status.
+  const studentProjects: { name: string; slug: string; status: SubmissionStatus; mark?: number; comment?: string }[] = [
     { name: "Portfolio Website", slug: "portfolio-website", status: "APPROVED", mark: 88, comment: "Clean design and great README!" },
     {
       name: "Task Manager",
@@ -71,19 +74,19 @@ async function main() {
     { name: "Movie Search App", slug: "movie-search-app", status: "PENDING" },
   ];
   let created = 0;
-  for (const [i, p] of demoProjects.entries()) {
-    const repoUrlKey = `github.com/student-demo/${p.slug}`;
+  for (const [i, p] of studentProjects.entries()) {
+    const repoUrlKey = `github.com/nadiaislam/${p.slug}`;
     if (await prisma.submission.findUnique({ where: { repoUrlKey }, select: { id: true } })) continue;
-    const createdAt = new Date(Date.now() - (demoProjects.length - i) * 24 * 60 * 60 * 1000);
+    const createdAt = new Date(Date.now() - (studentProjects.length - i) * 24 * 60 * 60 * 1000);
     await prisma.submission.create({
       data: {
         projectName: p.name,
-        repoUrl: `https://github.com/student-demo/${p.slug}`,
+        repoUrl: `https://github.com/nadiaislam/${p.slug}`,
         repoUrlKey,
-        liveUrl: `https://${p.slug}-demo.vercel.app`,
+        liveUrl: `https://${p.slug}-nadia.vercel.app`,
         description: `${p.name} built with Next.js and Tailwind CSS. Responsive layout, form validation and dark mode.`,
         status: p.status,
-        studentId: demo.STUDENT!,
+        studentId: quick.STUDENT!,
         createdAt,
         ...(p.status !== "PENDING" && {
           reviewedById: mentor.id,
@@ -98,7 +101,7 @@ async function main() {
   for (const [i, projectName] of projects.entries()) {
     const student = students[i % students.length]!;
     const slug = projectName.toLowerCase().replace(/\s+/g, "-");
-    const handle = student.email.split("@")[0];
+    const handle = handleFor(student.name); // GitHub usernames have no dots
     const repoUrl = `https://github.com/${handle}/${slug}`;
     const repoUrlKey = `github.com/${handle}/${slug}`;
     const status = statuses[i % statuses.length]!;

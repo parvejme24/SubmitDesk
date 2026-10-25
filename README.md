@@ -13,17 +13,17 @@ Students submit their projects (GitHub repo + live site). Mentors review them in
 | Frontend | https://submitdesk-frontend.vercel.app |
 | Backend health | https://submitdesk-backend.vercel.app/api/health |
 
-## Demo credentials
+## Test accounts
 
-The login page has **one-click demo buttons** for both roles. You can also type these in:
+The login page has **one-click sign-in buttons** for both roles. You can also type these in:
 
 | Role | Email | Password |
 |---|---|---|
-| Demo mentor | `mentor.demo@submitdesk.dev` | `Demo@12345` |
-| Demo student | `student.demo@submitdesk.dev` | `Demo@12345` |
-| Other seeded students | `student1@example.com` … `student5@example.com` | `Student@12345` |
+| Mentor (Tanvir Ahmed) | `tanvir.ahmed@submitdesk.dev` | `SubmitDesk@2026` |
+| Student (Nadia Islam) | `nadia.islam@submitdesk.dev` | `SubmitDesk@2026` |
+| Other students | `rahim.uddin@`, `karim.hasan@`, `nusrat.jahan@`, `tania.akter@`, `sabbir.ahmed@submitdesk.dev` | `Student@12345` |
 
-The demo student already has one pending, one approved and one rejected project, so every state is visible right away. The main mentor account comes from `SEED_MENTOR_EMAIL` / `SEED_MENTOR_PASSWORD` in `backend/.env` and is never shown in the app.
+Nadia already has one pending, one approved and one rejected project, so every state is visible right away. The main mentor account comes from `SEED_MENTOR_EMAIL` / `SEED_MENTOR_PASSWORD` in `backend/.env` and is never shown in the app.
 
 Anyone can create a **student** account at `/signup`. Mentor accounts can't be created through the app. They only come from the seed script.
 
@@ -53,7 +53,7 @@ The task leaves some things open on purpose. These are the decisions this projec
 | Filters | Server side: `status` (ALL / PENDING / APPROVED / REJECTED), `search` by project name, `sort` (newest / oldest) | The task requires server-side filters. Filter state lives in the URL, so refresh, back and shared links work |
 | Stats | Total / Pending / Approved / Rejected from one `groupBy` query | One DB round trip |
 | Token storage | JWT in an **httpOnly cookie**. The frontend proxies `/api/*` to Express | XSS can't read the token, and the cookie stays first-party |
-| Rate limits | Global: 100 req / 15 min per IP. Login: 10 **failed** attempts / 15 min per IP. Signup: 10 / 15 min per IP. Create/edit: 5 / hour **per student** | Spam protection where it matters. Successful logins don't count, so real users and demo clicks are never locked out, while password guessing still is |
+| Rate limits | Global: 100 req / 15 min per IP. Login: 10 **failed** attempts / 15 min per IP. Signup: 10 / 15 min per IP. Create/edit: 5 / hour **per student** | Spam protection where it matters. Successful logins don't count, so real users and the one-click buttons are never locked out, while password guessing still is |
 | Do failed submissions count toward the limit? | No. Only successful submissions count (`skipFailedRequests`) | A typo or a 409 shouldn't use up a student's quota. The global limiter still caps spam |
 
 > **Rate-limit store:** the default store is in-memory. It resets on restart and isn't shared between server instances. With several instances in production, use a Redis store.
@@ -78,7 +78,7 @@ cd backend
 npm install
 cp .env.example .env        # then fill in the values (see the table below)
 npx prisma migrate dev      # creates the tables and generates the Prisma client
-npm run db:seed             # your mentor, demo mentor/student, 5 students, 28 submissions
+npm run db:seed             # your mentor, the one-click mentor/student, 5 students, 28 submissions
 npm run dev                 # http://localhost:5050/api/health → { "ok": true }
 ```
 

@@ -20,7 +20,7 @@ export const globalLimiter = rateLimit({
 });
 
 // Login: only FAILED attempts count (wrong password, unknown email). This still stops password
-// guessing, but normal logins (and demo-account clicks) never lock anyone out.
+// guessing, but normal logins (including the one-click sign-in buttons) never lock anyone out.
 export const loginLimiter = rateLimit({
   keyGenerator: byIp,
   windowMs: 15 * 60 * 1000,

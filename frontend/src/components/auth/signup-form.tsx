@@ -18,7 +18,7 @@ import { signupSchema, type SignupValues } from "@/schemas/auth";
 
 const fields = [
   { name: "name", label: "Full name", type: "text", autoComplete: "name", placeholder: "Your name" },
-  { name: "email", label: "Email", type: "email", autoComplete: "email", placeholder: "you@example.com" },
+  { name: "email", label: "Email", type: "email", autoComplete: "email", placeholder: "you@gmail.com" },
   {
     name: "password",
     label: "Password",

@@ -178,7 +178,7 @@ export default function Home() {
       </main>
 
       <footer className="px-4 pb-6 text-center text-xs text-muted-foreground">
-        SubmitDesk · Try it with the demo accounts on the login page
+        SubmitDesk · Project submissions and mentor reviews
       </footer>
     </div>
   );
