@@ -54,7 +54,7 @@ export async function proxy(req: NextRequest) {
   const to = (path: string) => NextResponse.redirect(new URL(path, req.url));
 
   if (!role) {
-    if (isAuthPage) return NextResponse.next();
+    if (isAuthPage || pathname === "/") return NextResponse.next(); // "/" is the public landing page
     const res = to("/login");
     if (token) res.cookies.delete("token"); // clear a stale cookie
     return res;

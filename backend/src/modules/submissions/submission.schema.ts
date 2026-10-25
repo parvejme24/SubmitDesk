@@ -20,7 +20,7 @@ export const createSubmissionSchema = z.object({
     .max(1000, "Description must be at most 1000 characters"),
 });
 
-// Resubmission sends the full (edited) form again.
+// An edit (or resubmission) sends the full form again.
 export const updateSubmissionSchema = createSubmissionSchema;
 
 export const idParamSchema = z.object({ id: z.string().min(1) });

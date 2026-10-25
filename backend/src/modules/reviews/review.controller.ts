@@ -21,3 +21,8 @@ export const review: RequestHandler = async (req, res) => {
   const data = await reviewService.reviewSubmission(req.user!.id, res.locals.params.id, res.locals.body);
   sendResponse(res, { message: "Review saved", data });
 };
+
+export const grade: RequestHandler = async (_req, res) => {
+  const data = await reviewService.gradeSubmission(res.locals.params.id, res.locals.body);
+  sendResponse(res, { message: "Mark and feedback saved", data });
+};

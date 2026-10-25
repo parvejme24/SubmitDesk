@@ -1,8 +1,18 @@
 "use client";
 
-import { CalendarIcon, CheckIcon, ExternalLinkIcon, FolderGit2Icon, MessageSquareIcon, XIcon } from "lucide-react";
+import {
+  CalendarIcon,
+  CheckIcon,
+  ExternalLinkIcon,
+  FolderGit2Icon,
+  MessageSquareIcon,
+  PencilIcon,
+  PlusIcon,
+  XIcon,
+} from "lucide-react";
 import { motion } from "motion/react";
 import { QueryError } from "@/components/shared/query-error";
+import { MarkBadge } from "@/components/shared/mark-badge";
 import { StatusBadge } from "@/components/shared/status-badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import {
@@ -25,10 +35,11 @@ type Props = {
   preview: MentorSubmission | null;
   onClose: () => void;
   onReview: (t: NonNullable<ReviewTarget>) => void;
+  onGrade: (s: MentorSubmission) => void;
 };
 
 /** Everything about one submission: full description, links, student and review history. */
-export function SubmissionDetailsDialog({ preview, onClose, onReview }: Props) {
+export function SubmissionDetailsDialog({ preview, onClose, onReview, onGrade }: Props) {
   const { data, isPending, isError, error, refetch } = useMentorSubmission(preview?.id ?? null);
   const s = data ?? preview;
 
@@ -129,6 +140,7 @@ export function SubmissionDetailsDialog({ preview, onClose, onReview }: Props) {
                           </span>
                           {f.mentor?.name && <span>by {f.mentor.name}</span>}
                           {f.createdAt && <span>· {formatDateTime(f.createdAt)}</span>}
+                          <MarkBadge mark={f.mark} className="ml-auto h-5 px-2" />
                         </div>
                         {f.comment && (
                           <p className="mt-1 flex gap-1.5 text-sm">
@@ -142,6 +154,21 @@ export function SubmissionDetailsDialog({ preview, onClose, onReview }: Props) {
                 )}
               </section>
             </div>
+
+            {s.status !== "PENDING" && (
+              <DialogFooter>
+                <Button
+                  variant={s.feedbacks[0]?.mark != null ? "outline" : "default"}
+                  onClick={() => {
+                    onClose();
+                    onGrade(s);
+                  }}
+                >
+                  {s.feedbacks[0]?.mark != null ? <PencilIcon /> : <PlusIcon />}
+                  {s.feedbacks[0]?.mark != null ? "Edit mark & feedback" : "Add mark & feedback"}
+                </Button>
+              </DialogFooter>
+            )}
 
             {s.status === "PENDING" && (
               <DialogFooter>

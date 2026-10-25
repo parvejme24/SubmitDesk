@@ -12,7 +12,12 @@ export const getMine: RequestHandler = async (req, res) => {
   sendResponse(res, { message: "Your submissions", data: submissions });
 };
 
-export const resubmit: RequestHandler = async (req, res) => {
-  const submission = await submissionService.resubmit(req.user!.id, res.locals.params.id, res.locals.body);
-  sendResponse(res, { message: "Project resubmitted", data: submission });
+export const update: RequestHandler = async (req, res) => {
+  const submission = await submissionService.updateSubmission(req.user!.id, res.locals.params.id, res.locals.body);
+  sendResponse(res, { message: "Submission updated", data: submission });
+};
+
+export const remove: RequestHandler = async (req, res) => {
+  await submissionService.deleteSubmission(req.user!.id, res.locals.params.id);
+  sendResponse(res, { message: "Submission deleted" });
 };

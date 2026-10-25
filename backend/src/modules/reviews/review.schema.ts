@@ -13,25 +13,30 @@ export const listQuerySchema = z.object({
   sort: z.enum(["newest", "oldest"]).default("newest"),
 });
 
-export const reviewSchema = z.discriminatedUnion("decision", [
-  z.object({
-    decision: z.literal("APPROVED"),
-    comment: z
-      .string()
-      .trim()
-      .max(500)
-      .optional()
-      .transform((s) => s || undefined),
-  }),
-  z.object({
-    decision: z.literal("REJECTED"),
-    comment: z
-      .string({ error: "Please explain why the project is rejected" })
-      .trim()
-      .min(10, "Please explain why (at least 10 characters)")
-      .max(500),
-  }),
-]);
+const mark = z
+  .number({ error: "Give a mark from 0 to 100" })
+  .int("The mark must be a whole number")
+  .min(0, "The mark can't be below 0")
+  .max(100, "The mark can't be above 100");
+
+const comment = z
+  .string()
+  .trim()
+  .max(500)
+  .optional()
+  .transform((s) => s || undefined);
+
+// Step 1: approve or reject. The mark and feedback can come now or later (step 2, /grade).
+export const reviewSchema = z.object({
+  decision: z.enum(["APPROVED", "REJECTED"]),
+  mark: mark.optional(),
+  comment,
+});
+
+// Step 2: add or change the mark (out of 100) and feedback of a reviewed submission.
+// An empty comment clears the feedback.
+export const gradeSchema = z.object({ mark, comment });
 
 export type ListQuery = z.infer<typeof listQuerySchema>;
 export type ReviewInput = z.infer<typeof reviewSchema>;
+export type GradeInput = z.infer<typeof gradeSchema>;

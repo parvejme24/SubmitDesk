@@ -36,6 +36,13 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="relative flex min-h-full flex-col">
+        {/* First Tab stop: keyboard users can jump past the navigation */}
+        <a
+          href="#main"
+          className="fixed top-3 left-3 z-50 -translate-y-20 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-lg transition-transform focus:translate-y-0"
+        >
+          Skip to content
+        </a>
         <ThemeProvider>
           <AppBackground />
           <Providers>{children}</Providers>

@@ -1,7 +1,7 @@
 import type { Prisma } from "../../generated/prisma/client.js";
 import { prisma } from "../../lib/prisma.js";
 import { AppError } from "../../utils/app-error.js";
-import type { ListQuery, ReviewInput } from "./review.schema.js";
+import type { GradeInput, ListQuery, ReviewInput } from "./review.schema.js";
 
 export async function listSubmissions(q: ListQuery) {
   const where: Prisma.SubmissionWhereInput = {
@@ -22,7 +22,7 @@ export async function listSubmissions(q: ListQuery) {
         // One joined query → no N+1
         student: { select: { id: true, name: true, email: true } },
         reviewedBy: { select: { id: true, name: true } },
-        feedbacks: { orderBy: { createdAt: "desc" }, take: 1, select: { comment: true, decision: true } },
+        feedbacks: { orderBy: { createdAt: "desc" }, take: 1, select: { comment: true, decision: true, mark: true } },
       },
     }),
     prisma.submission.count({ where }),
@@ -44,7 +44,7 @@ export async function getSubmission(id: string) {
       reviewedBy: { select: { id: true, name: true } },
       feedbacks: {
         orderBy: { createdAt: "desc" },
-        select: { id: true, comment: true, decision: true, createdAt: true, mentor: { select: { name: true } } },
+        select: { id: true, comment: true, decision: true, mark: true, createdAt: true, mentor: { select: { name: true } } },
       },
     },
   });
@@ -78,7 +78,7 @@ export async function reviewSubmission(mentorId: string, id: string, input: Revi
     }
 
     await tx.feedback.create({
-      data: { submissionId: id, mentorId, decision: input.decision, comment: input.comment },
+      data: { submissionId: id, mentorId, decision: input.decision, mark: input.mark, comment: input.comment },
     });
 
     return tx.submission.findUnique({
@@ -89,4 +89,30 @@ export async function reviewSubmission(mentorId: string, id: string, input: Revi
       },
     });
   });
+}
+
+/**
+ * Add or change the mark and feedback of the latest review. Only for a reviewed (APPROVED or
+ * REJECTED) submission: a PENDING one has to be approved or rejected first.
+ */
+export async function gradeSubmission(id: string, input: GradeInput) {
+  const submission = await prisma.submission.findUnique({
+    where: { id },
+    select: { status: true, feedbacks: { orderBy: { createdAt: "desc" }, take: 1, select: { id: true } } },
+  });
+  if (!submission) throw new AppError(404, "Submission not found");
+  const latest = submission.feedbacks[0];
+  if (submission.status === "PENDING" || !latest) {
+    throw new AppError(409, "Approve or reject this submission before giving a mark");
+  }
+
+  // Conditional on the status, so a student resubmitting at the same moment doesn't get
+  // their old review re-graded while it's back in the queue.
+  const result = await prisma.feedback.updateMany({
+    where: { id: latest.id, submission: { status: { in: ["APPROVED", "REJECTED"] } } },
+    data: { mark: input.mark, comment: input.comment ?? null },
+  });
+  if (result.count === 0) throw new AppError(409, "This submission was just resubmitted, refresh to see it");
+
+  return getSubmission(id);
 }

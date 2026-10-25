@@ -14,9 +14,9 @@ import { useDebounce } from "@/hooks/use-debounce";
 import { useMentorSubmissions } from "@/hooks/use-mentor";
 import type { ListParams, MentorSubmission, StatusFilter as Status } from "@/types";
 import { Pagination } from "./pagination";
-import { ReviewDialog, type ReviewTarget } from "./review-dialog";
+import { GradeDialog, ReviewDialog, type ReviewTarget } from "./review-dialog";
 import { SubmissionDetailsDialog } from "./submission-details-dialog";
-import { StatsCards } from "./stats-cards";
+import { PendingBanner, StatsCards } from "./stats-cards";
 import { StatusFilter } from "./status-filter";
 import { SubmissionsTable } from "./submissions-table";
 
@@ -70,6 +70,7 @@ export function MentorDashboard() {
   const debouncedSearch = useDebounce(searchInput.trim(), 400);
   const [reviewTarget, setReviewTarget] = useState<ReviewTarget>(null);
   const [viewing, setViewing] = useState<MentorSubmission | null>(null);
+  const [grading, setGrading] = useState<MentorSubmission | null>(null);
 
   const { data, isPending, isError, error, refetch, isFetching, isPlaceholderData } = useMentorSubmissions(params);
 
@@ -87,7 +88,8 @@ export function MentorDashboard() {
 
   return (
     <div className="space-y-6">
-      <StatsCards />
+      <PendingBanner active={params.status} onShow={() => update({ status: "PENDING" })} />
+      <StatsCards active={params.status} onSelect={(status) => update({ status })} />
 
       <div className="flex flex-col gap-3 rounded-2xl glass p-2 md:flex-row md:items-center md:justify-between">
         <StatusFilter value={params.status} onChange={(status) => update({ status })} />
@@ -115,6 +117,13 @@ export function MentorDashboard() {
         </div>
       </div>
 
+      {/* Screen readers hear the result count whenever the filter, search or page changes */}
+      <p className="sr-only" aria-live="polite">
+        {data && !isPlaceholderData
+          ? `${data.meta.total} ${params.status === "ALL" ? "" : `${params.status.toLowerCase()} `}projects found, page ${data.meta.page} of ${data.meta.totalPages}`
+          : ""}
+      </p>
+
       {isError ? (
         <QueryError message={error.message} onRetry={() => refetch()} />
       ) : isPending ? (
@@ -134,7 +143,7 @@ export function MentorDashboard() {
             animate={{ opacity: isPlaceholderData ? 0.55 : 1, filter: isPlaceholderData ? "blur(1.5px)" : "blur(0px)" }}
             transition={{ duration: 0.25, ease: "easeOut" }}
           >
-            <SubmissionsTable items={data.data} onReview={setReviewTarget} onView={setViewing} />
+            <SubmissionsTable items={data.data} onReview={setReviewTarget} onView={setViewing} onGrade={setGrading} />
           </motion.div>
           <div className="flex items-center gap-2">
             <div className="flex-1">
@@ -145,8 +154,14 @@ export function MentorDashboard() {
         </div>
       )}
 
-      <SubmissionDetailsDialog preview={viewing} onClose={() => setViewing(null)} onReview={setReviewTarget} />
+      <SubmissionDetailsDialog
+        preview={viewing}
+        onClose={() => setViewing(null)}
+        onReview={setReviewTarget}
+        onGrade={setGrading}
+      />
       <ReviewDialog target={reviewTarget} onClose={() => setReviewTarget(null)} />
+      <GradeDialog target={grading} onClose={() => setGrading(null)} />
     </div>
   );
 }

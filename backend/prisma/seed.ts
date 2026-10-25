@@ -59,12 +59,13 @@ async function main() {
   console.log(`✔ Demo accounts: ${DEMO_ACCOUNTS.map((a) => a.email).join(", ")} (password: Demo@12345)`);
 
   // A few projects for the demo student, one in each status.
-  const demoProjects: { name: string; slug: string; status: SubmissionStatus; comment?: string }[] = [
-    { name: "Portfolio Website", slug: "portfolio-website", status: "APPROVED", comment: "Clean design and great README!" },
+  const demoProjects: { name: string; slug: string; status: SubmissionStatus; mark?: number; comment?: string }[] = [
+    { name: "Portfolio Website", slug: "portfolio-website", status: "APPROVED", mark: 88, comment: "Clean design and great README!" },
     {
       name: "Task Manager",
       slug: "task-manager",
       status: "REJECTED",
+      mark: 45,
       comment: "Drag and drop breaks on mobile, and the live link shows a 404 on refresh.",
     },
     { name: "Movie Search App", slug: "movie-search-app", status: "PENDING" },
@@ -87,7 +88,7 @@ async function main() {
         ...(p.status !== "PENDING" && {
           reviewedById: mentor.id,
           reviewedAt: new Date(createdAt.getTime() + 3 * 60 * 60 * 1000),
-          feedbacks: { create: { mentorId: mentor.id, decision: p.status, comment: p.comment } },
+          feedbacks: { create: { mentorId: mentor.id, decision: p.status, mark: p.mark, comment: p.comment } },
         }),
       },
     });
@@ -123,6 +124,8 @@ async function main() {
             create: {
               mentorId: mentor.id,
               decision: status,
+              // Spread the marks a bit: approved 72–96, rejected 30–54
+              mark: status === "APPROVED" ? 72 + ((i * 7) % 25) : 30 + ((i * 5) % 25),
               comment:
                 status === "APPROVED"
                   ? "Great work, clean code and good structure."

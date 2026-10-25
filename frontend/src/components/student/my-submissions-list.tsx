@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 import Link from "next/link";
 import { AnimatedNumber, Stagger, StaggerItem } from "@/components/motion/primitives";
 import { EmptyState } from "@/components/shared/empty-state";
+import { MARK_MAX } from "@/components/shared/mark-badge";
 import { QueryError } from "@/components/shared/query-error";
 import { StatusBadge, statusStyles } from "@/components/shared/status-badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -13,7 +14,7 @@ import { useMySubmissions } from "@/hooks/use-submissions";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { Submission, SubmissionStatus } from "@/types";
-import { ResubmitDialog } from "./resubmit-dialog";
+import { SubmissionActions } from "./submission-actions";
 
 const STATUSES: SubmissionStatus[] = ["PENDING", "APPROVED", "REJECTED"];
 
@@ -82,6 +83,48 @@ export function MySubmissionsList() {
   );
 }
 
+/** Submitted → In review → Decision. Text labels carry the meaning, so it never relies on color alone. */
+function ReviewProgress({ status }: { status: SubmissionStatus }) {
+  const decided = status !== "PENDING";
+  const steps = [
+    { label: "Submitted", state: "done" },
+    { label: "In review", state: decided ? "done" : "current" },
+    { label: decided ? statusStyles[status].label : "Decision", state: decided ? "done" : "todo" },
+  ] as const;
+  const finalTone = status === "REJECTED" ? "bg-rose-500" : "bg-emerald-500";
+
+  return (
+    <ol className="mt-4 flex items-center gap-2" aria-label="Review progress">
+      {steps.map((step, i) => {
+        const isLast = i === steps.length - 1;
+        return (
+          <li key={step.label} className="flex flex-1 items-center gap-2 last:flex-none">
+            <span className="flex items-center gap-1.5 text-xs whitespace-nowrap">
+              <span
+                aria-hidden
+                className={cn(
+                  "size-2.5 rounded-full",
+                  step.state === "done" && (isLast ? finalTone : "bg-primary"),
+                  step.state === "current" && "animate-pulse bg-amber-500 ring-4 ring-amber-500/20",
+                  step.state === "todo" && "bg-muted-foreground/30",
+                )}
+              />
+              <span className={cn(step.state === "todo" ? "text-muted-foreground" : "font-medium")}>{step.label}</span>
+              {step.state === "current" && <span className="sr-only">(current step)</span>}
+            </span>
+            {!isLast && (
+              <span
+                aria-hidden
+                className={cn("h-px flex-1", steps[i + 1].state === "todo" ? "bg-border" : "bg-primary/40")}
+              />
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
 function SubmissionCard({ submission: s }: { submission: Submission }) {
   const feedback = s.feedbacks[0];
 
@@ -104,6 +147,8 @@ function SubmissionCard({ submission: s }: { submission: Submission }) {
 
       <p className="mt-3 line-clamp-2 text-sm text-muted-foreground">{s.description}</p>
 
+      <ReviewProgress status={s.status} />
+
       <div className="mt-4 flex flex-wrap gap-2">
         <a
           href={s.repoUrl}
@@ -125,26 +170,39 @@ function SubmissionCard({ submission: s }: { submission: Submission }) {
         </a>
       </div>
 
-      {s.status !== "PENDING" && feedback?.comment && (
-        <div
+      {/* Result of the latest review. Hidden while PENDING (after a resubmit the old review is history). */}
+      {s.status !== "PENDING" && feedback && (feedback.mark != null || feedback.comment) && (
+        <section
+          aria-label="Review result"
           className={cn(
-            "mt-4 rounded-xl p-3 text-sm",
+            "mt-4 flex gap-4 rounded-xl p-3 text-sm",
             s.status === "REJECTED" ? "bg-rose-500/8" : "bg-emerald-500/8",
           )}
         >
-          <p className="mb-1 flex items-center gap-1.5 font-medium">
-            <MessageSquareIcon className="size-3.5" />
-            Mentor feedback{feedback.mentor?.name ? ` · ${feedback.mentor.name}` : ""}
-          </p>
-          <p className="text-muted-foreground">{feedback.comment}</p>
-        </div>
+          {feedback.mark != null && (
+            <div className="shrink-0 text-center">
+              <p className="text-xs text-muted-foreground">Mark</p>
+              <p className="text-2xl leading-tight font-semibold tabular-nums">
+                {feedback.mark}
+                <span className="text-sm font-normal text-muted-foreground">/{MARK_MAX}</span>
+              </p>
+            </div>
+          )}
+          <div className="min-w-0 flex-1 space-y-1">
+            <p className="flex items-center gap-1.5 font-medium">
+              <MessageSquareIcon className="size-3.5" aria-hidden />
+              Mentor feedback{feedback.mentor?.name ? ` · ${feedback.mentor.name}` : ""}
+            </p>
+            <p className={cn("break-words", feedback.comment ? "text-muted-foreground" : "text-muted-foreground/70 italic")}>
+              {feedback.comment ?? "No written feedback."}
+            </p>
+          </div>
+        </section>
       )}
 
-      {s.status === "REJECTED" && (
-        <div className="mt-4 flex justify-end">
-          <ResubmitDialog submission={s} />
-        </div>
-      )}
+      <div className="mt-4 flex justify-end border-t border-border/60 pt-3">
+        <SubmissionActions submission={s} />
+      </div>
     </motion.article>
   );
 }

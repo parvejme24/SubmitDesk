@@ -75,6 +75,8 @@
   --ring: oklch(0.6 0.17 281);
 
   --input-bg: oklch(1 0 0 / 0.7);
+  --scrollbar-thumb: oklch(0.5 0.05 272 / 0.28);
+  --scrollbar-thumb-hover: oklch(0.5 0.08 275 / 0.45);
   --glass: oklch(0.995 0.004 270 / 0.58);
   --glass-strong: oklch(0.995 0.004 270 / 0.8);
   --glass-border: oklch(1 0 0 / 0.75);
@@ -124,6 +126,8 @@
   --ring: oklch(0.7 0.14 285);
 
   --input-bg: oklch(0.2 0.03 272 / 0.5);
+  --scrollbar-thumb: oklch(0.85 0.02 272 / 0.2);
+  --scrollbar-thumb-hover: oklch(0.85 0.04 275 / 0.35);
   --glass: oklch(0.27 0.03 272 / 0.5);
   --glass-strong: oklch(0.25 0.03 272 / 0.82);
   --glass-border: oklch(0.95 0.02 272 / 0.09);
@@ -203,5 +207,50 @@
   }
   ::selection {
     background: oklch(0.6 0.17 281 / 0.25);
+  }
+  /* Thin, theme-colored scrollbars everywhere (page, dialogs, tables, menus) */
+  html {
+    scrollbar-gutter: stable; /* no layout jump when a page starts to scroll */
+  }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--scrollbar-thumb) transparent;
+  }
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background-color: var(--scrollbar-thumb);
+    border: 3px solid transparent;
+    border-radius: 9999px;
+    background-clip: content-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: var(--scrollbar-thumb-hover);
+  }
+  ::-webkit-scrollbar-corner {
+    background: transparent;
+  }
+  /* Visible keyboard focus on plain links and buttons that don't style their own */
+  :where(a[href], button, summary, [tabindex]:not([tabindex="-1"])):focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 0.375rem;
+  }
+}
+
+/* Respect the OS "reduce motion" setting for CSS animations too (Motion handles its own via MotionConfig) */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  ::before,
+  ::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }

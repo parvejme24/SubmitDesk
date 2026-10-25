@@ -1,8 +1,18 @@
 "use client";
 
-import { CalendarIcon, CheckIcon, ExternalLinkIcon, EyeIcon, FolderGit2Icon, XIcon } from "lucide-react";
+import {
+  CalendarIcon,
+  CheckIcon,
+  ExternalLinkIcon,
+  EyeIcon,
+  FolderGit2Icon,
+  PencilIcon,
+  PlusIcon,
+  XIcon,
+} from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { easeOut } from "@/components/motion/primitives";
+import { MarkBadge } from "@/components/shared/mark-badge";
 import { StatusBadge, statusStyles } from "@/components/shared/status-badge";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -19,6 +29,8 @@ type Props = {
   items: MentorSubmission[];
   onReview: (t: NonNullable<ReviewTarget>) => void;
   onView: (s: MentorSubmission) => void;
+  /** Step 2: add or change the mark and feedback of a reviewed submission */
+  onGrade: (s: MentorSubmission) => void;
 };
 
 const initials = (name: string) =>
@@ -43,7 +55,7 @@ function StudentCell({ student }: { student: MentorSubmission["student"] }) {
   );
 }
 
-function Actions({ s, onReview, onView, full }: { s: MentorSubmission; full?: boolean } & Omit<Props, "items">) {
+function Actions({ s, onReview, onView, onGrade, full }: { s: MentorSubmission; full?: boolean } & Omit<Props, "items">) {
   const details = (
     <Button
       size={full ? "sm" : "icon-sm"}
@@ -59,13 +71,20 @@ function Actions({ s, onReview, onView, full }: { s: MentorSubmission; full?: bo
   );
 
   if (s.status !== "PENDING") {
+    const hasMark = s.feedbacks[0]?.mark != null;
     return (
-      <div className={cn("flex items-center gap-2", full ? "w-full justify-between" : "justify-end")}>
-        <span className="text-xs text-muted-foreground">
-          Reviewed{s.reviewedBy ? ` by ${s.reviewedBy.name}` : ""}
-          {s.reviewedAt ? ` · ${formatDate(s.reviewedAt)}` : ""}
-        </span>
-        {full ? <span className="shrink-0">{details}</span> : details}
+      <div className={cn("flex items-center gap-2", full ? "w-full" : "justify-end")}>
+        {details}
+        <Button
+          size="sm"
+          variant={hasMark ? "outline" : "default"}
+          className={cn(full && "flex-1")}
+          onClick={() => onGrade(s)}
+          aria-label={`${hasMark ? "Edit mark and feedback for" : "Add mark and feedback to"} ${s.projectName}`}
+        >
+          {hasMark ? <PencilIcon /> : <PlusIcon />}
+          {hasMark ? "Edit mark" : "Add mark"}
+        </Button>
       </div>
     );
   }
@@ -94,18 +113,20 @@ function Actions({ s, onReview, onView, full }: { s: MentorSubmission; full?: bo
 }
 
 /** Table on tablets/desktops, card list on phones. */
-export function SubmissionsTable({ items, onReview, onView }: Props) {
+export function SubmissionsTable({ items, onReview, onView, onGrade }: Props) {
   return (
     <>
       <div className="hidden overflow-hidden rounded-2xl glass md:block">
         <div className="overflow-x-auto">
-          <Table className="min-w-[760px]">
+          <Table className="min-w-[820px]">
+            <caption className="sr-only">Project submissions with status and review actions</caption>
             <TableHeader>
               <TableRow className="border-b border-border/60 hover:bg-transparent">
                 <TableHead className="pl-5">Project</TableHead>
                 <TableHead>Student</TableHead>
                 <TableHead>Links</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Mark</TableHead>
                 <TableHead>Submitted</TableHead>
                 <TableHead className="pr-5 text-right">Action</TableHead>
               </TableRow>
@@ -151,12 +172,27 @@ export function SubmissionsTable({ items, onReview, onView }: Props) {
                     </TableCell>
                     <TableCell>
                       <StatusBadge status={s.status} />
+                      {s.status !== "PENDING" && s.reviewedAt && (
+                        <p className="mt-1 text-xs text-muted-foreground">
+                          {s.reviewedBy ? `${s.reviewedBy.name} · ` : ""}
+                          {formatDate(s.reviewedAt)}
+                        </p>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {s.feedbacks[0]?.mark != null ? (
+                        <MarkBadge mark={s.feedbacks[0].mark} />
+                      ) : (
+                        <span className="text-sm text-muted-foreground" aria-label="No mark yet">
+                          —
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell className="text-sm text-muted-foreground" title={formatDateTime(s.createdAt)}>
                       {formatDate(s.createdAt)}
                     </TableCell>
                     <TableCell className="pr-5 text-right">
-                      <Actions s={s} onReview={onReview} onView={onView} />
+                      <Actions s={s} onReview={onReview} onView={onView} onGrade={onGrade} />
                     </TableCell>
                   </MotionRow>
                 ))}
@@ -192,7 +228,10 @@ export function SubmissionsTable({ items, onReview, onView }: Props) {
                     {formatDate(s.createdAt)}
                   </p>
                 </div>
-                <StatusBadge status={s.status} />
+                <div className="flex shrink-0 flex-col items-end gap-1.5">
+                  <StatusBadge status={s.status} />
+                  <MarkBadge mark={s.feedbacks[0]?.mark} />
+                </div>
               </div>
               <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">{s.description}</p>
               <div className="mt-3">
@@ -219,7 +258,7 @@ export function SubmissionsTable({ items, onReview, onView }: Props) {
                 </a>
               </div>
               <div className="mt-3 border-t border-border/60 pt-3">
-                <Actions s={s} onReview={onReview} onView={onView} full />
+                <Actions s={s} onReview={onReview} onView={onView} onGrade={onGrade} full />
               </div>
             </motion.article>
           ))}

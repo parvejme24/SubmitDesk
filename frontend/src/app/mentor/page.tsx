@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
 import { MentorDashboard } from "@/components/mentor/mentor-dashboard";
+import { Greeting } from "@/components/shared/greeting";
 import { PageHeader } from "@/components/shared/page-header";
 import { DashboardSkeleton } from "./dashboard-skeleton";
 
@@ -10,7 +11,7 @@ export default function MentorPage() {
   return (
     <div className="space-y-6">
       <PageHeader
-        eyebrow="Mentor workspace"
+        eyebrow={<Greeting fallback="Mentor workspace" />}
         title="Review dashboard"
         description="Approve or reject student project submissions."
       />

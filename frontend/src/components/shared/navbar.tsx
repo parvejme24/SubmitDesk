@@ -6,6 +6,7 @@ import {
   LayoutGridIcon,
   LogOutIcon,
   MailIcon,
+  UsersIcon,
   type LucideIcon,
 } from "lucide-react";
 import { motion } from "motion/react";
@@ -35,7 +36,10 @@ const LINKS: Record<"student" | "mentor", NavLink[]> = {
     { href: "/student", label: "My submissions", icon: LayoutGridIcon },
     { href: "/student/submit", label: "Submit project", icon: FilePlus2Icon },
   ],
-  mentor: [],
+  mentor: [
+    { href: "/mentor", label: "Review dashboard", icon: LayoutDashboardIcon },
+    { href: "/mentor/students", label: "Students", icon: UsersIcon },
+  ],
 };
 
 const initials = (name: string) =>
@@ -65,7 +69,7 @@ export function Navbar({ area }: { area: "student" | "mentor" }) {
             <Logo href={user?.role === "MENTOR" ? "/mentor" : "/student"} />
           </div>
 
-          <nav className="hidden h-full items-center gap-6 sm:flex">
+          <nav aria-label="Main" className="hidden h-full items-center gap-6 sm:flex">
             {links.map((l) => (
               <NavItem key={l.href} link={l} active={pathname === l.href} />
             ))}
@@ -79,8 +83,8 @@ export function Navbar({ area }: { area: "student" | "mentor" }) {
       </motion.header>
 
       {/* Phone: bottom tab bar, easy to reach with a thumb */}
-      {links.length > 0 && (
-        <nav className="fixed inset-x-3 bottom-3 z-40 flex h-16 rounded-2xl glass-strong pb-[env(safe-area-inset-bottom)] sm:hidden">
+      {links.length > 1 && (
+        <nav aria-label="Main" className="fixed inset-x-3 bottom-3 z-40 flex h-16 rounded-2xl glass-strong pb-[env(safe-area-inset-bottom)] sm:hidden">
           {links.map((l) => (
             <NavItem key={l.href} link={l} active={pathname === l.href} mobile />
           ))}
@@ -166,6 +170,12 @@ function UserMenu({ user }: { user: User }) {
           <LayoutDashboardIcon />
           {user.role === "MENTOR" ? "Review dashboard" : "My submissions"}
         </DropdownMenuItem>
+        {user.role === "MENTOR" && (
+          <DropdownMenuItem render={<Link href="/mentor/students" />} className="cursor-pointer gap-2.5 py-2">
+            <UsersIcon />
+            Students
+          </DropdownMenuItem>
+        )}
         {user.role === "STUDENT" && (
           <DropdownMenuItem render={<Link href="/student/submit" />} className="cursor-pointer gap-2.5 py-2">
             <FilePlus2Icon />

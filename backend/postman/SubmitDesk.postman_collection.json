@@ -16,6 +16,10 @@
     {
       "key": "submissionId",
       "value": ""
+    },
+    {
+      "key": "studentId",
+      "value": ""
     }
   ],
   "item": [
@@ -338,18 +342,17 @@
           }
         },
         {
-          "name": "Resubmit rejected",
+          "name": "Edit submission (pending or rejected)",
           "request": {
             "method": "PATCH",
             "url": {
-              "raw": "{{baseUrl}}/submissions/{{submissionId}}/resubmit",
+              "raw": "{{baseUrl}}/submissions/{{submissionId}}",
               "host": [
                 "{{baseUrl}}"
               ],
               "path": [
                 "submissions",
-                "{{submissionId}}",
-                "resubmit"
+                "{{submissionId}}"
               ]
             },
             "header": [
@@ -362,6 +365,33 @@
               "mode": "raw",
               "raw": "{\n  \"projectName\": \"Weather Dashboard\",\n  \"repoUrl\": \"https://github.com/your-name/weather-dashboard\",\n  \"liveUrl\": \"https://weather-dashboard.vercel.app\",\n  \"description\": \"A weather dashboard built with React, showing a 5-day forecast and search by city. Fixed mobile layout.\"\n}"
             },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete submission (pending or rejected)",
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/submissions/{{submissionId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "submissions",
+                "{{submissionId}}"
+              ]
+            },
+            "header": [],
             "auth": {
               "type": "bearer",
               "bearer": [
@@ -479,7 +509,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"decision\": \"APPROVED\",\n  \"comment\": \"Great work!\"\n}"
+              "raw": "{\n  \"decision\": \"APPROVED\",\n  \"mark\": 90,\n  \"comment\": \"Great work!\"\n}"
             },
             "auth": {
               "type": "bearer",
@@ -517,8 +547,115 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"decision\": \"REJECTED\",\n  \"comment\": \"README is missing setup steps.\"\n}"
+              "raw": "{\n  \"decision\": \"REJECTED\",\n  \"mark\": 45,\n  \"comment\": \"README is missing setup steps.\"\n}"
             },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Add or edit mark & feedback",
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/mentor/submissions/{{submissionId}}/grade",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mentor",
+                "submissions",
+                "{{submissionId}}",
+                "grade"
+              ]
+            },
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"mark\": 88,\n  \"comment\": \"Clean code and a clear README.\"\n}"
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "List students",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/mentor/students?page=1&limit=10&search=",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mentor",
+                "students"
+              ],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "search",
+                  "value": ""
+                }
+              ]
+            },
+            "header": [],
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{token}}",
+                  "type": "string"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Student details",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/mentor/students/{{studentId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "mentor",
+                "students",
+                "{{studentId}}"
+              ]
+            },
+            "header": [],
             "auth": {
               "type": "bearer",
               "bearer": [

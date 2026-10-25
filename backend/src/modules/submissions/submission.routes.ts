@@ -12,10 +12,12 @@ submissionRoutes.use(authenticate, authorize("STUDENT"));
 
 submissionRoutes.post("/", submissionLimiter, validate(createSubmissionSchema), controller.create);
 submissionRoutes.get("/me", controller.getMine);
+// Edit (PENDING stays PENDING, REJECTED goes back to PENDING). Counts toward the submission limit.
 submissionRoutes.patch(
-  "/:id/resubmit",
+  "/:id",
   submissionLimiter,
   validate(idParamSchema, "params"),
   validate(updateSubmissionSchema),
-  controller.resubmit,
+  controller.update,
 );
+submissionRoutes.delete("/:id", validate(idParamSchema, "params"), controller.remove);

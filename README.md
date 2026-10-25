@@ -1,6 +1,6 @@
 # SubmitDesk — Project Review Dashboard
 
-Students submit their projects (GitHub repo + live site). Mentors review them in a dashboard and approve or reject them with feedback.
+Students submit their projects (GitHub repo + live site). Mentors review them in a dashboard: they give a mark out of 100, approve or reject, and can add feedback.
 
 - **Frontend:** Next.js 16 (App Router), TailwindCSS 4, shadcn/ui, Motion (Framer Motion) animations, TanStack Query, react-hook-form + zod
 - **Backend:** Express 5, Prisma 7, PostgreSQL, JWT (httpOnly cookie), zod, express-rate-limit
@@ -42,7 +42,10 @@ The task leaves some things open on purpose. These are the decisions this projec
 | Submission statuses | `PENDING` → `APPROVED` or `REJECTED` | Simple state machine |
 | Can a submission be reviewed twice? | Only `PENDING` submissions can be reviewed (conditional `updateMany … where status = PENDING`) | Two mentors clicking at once → one wins, the other gets 409 instead of silently overwriting |
 | Resubmission after rejection | The owner edits the rejected submission and it goes back to `PENDING` | Realistic flow. Avoids "duplicate" blocking a fixed project |
-| Reject reason | Rejecting **requires** feedback (min 10 chars). Approval feedback is optional | Students need to know why they were rejected |
+| Can a student edit or delete? | Yes, while the project is `PENDING` or `REJECTED`. Editing a pending one keeps it in the queue. **Approved projects are locked** (409). Deleting frees the repo URL again | Students can fix mistakes, but a mentor's approval can't be changed afterwards. The write is conditional on status, so a mentor approving at the same moment wins cleanly |
+| Review flow | Two steps: **1)** approve or reject (`/review`), **2)** add or change the mark and feedback (`/grade`) any time after. The mark can also be sent with step 1 | The decision and the grading are separate jobs. A mentor can approve now and grade later, or fix a mark |
+| Marks | Every graded review has a **mark out of 100**: a whole number 0–100, checked by zod and by a database `CHECK` constraint. The student sees the mark on their project card | One clear number per review. Stored on the review row, so each resubmission gets its own mark and the history keeps them all |
+| Feedback | **Optional** for both approve and reject (max 500 chars) | The mentor adds a comment only when there is something to say. The mark is always there |
 | Feedback model | A separate `Feedback` table (full review history) | A resubmitted project keeps its earlier reviews |
 | How does a mentor judge a project? | A **details view** (click a project name or the eye icon) shows the full description, links, student and the whole review history, with Approve/Reject right there | The table truncates descriptions. A mentor shouldn't decide without reading the full submission or seeing why it was rejected before |
 | Who sees which submissions? | Students only see their own. Mentors see all | Data privacy |
@@ -50,7 +53,7 @@ The task leaves some things open on purpose. These are the decisions this projec
 | Filters | Server side: `status` (ALL / PENDING / APPROVED / REJECTED), `search` by project name, `sort` (newest / oldest) | The task requires server-side filters. Filter state lives in the URL, so refresh, back and shared links work |
 | Stats | Total / Pending / Approved / Rejected from one `groupBy` query | One DB round trip |
 | Token storage | JWT in an **httpOnly cookie**. The frontend proxies `/api/*` to Express | XSS can't read the token, and the cookie stays first-party |
-| Rate limits | Global: 100 req / 15 min per IP. Login: 10 **failed** attempts / 15 min per IP. Signup: 10 / 15 min per IP. Create/resubmit: 5 / hour **per student** | Spam protection where it matters. Successful logins don't count, so real users and demo clicks are never locked out, while password guessing still is |
+| Rate limits | Global: 100 req / 15 min per IP. Login: 10 **failed** attempts / 15 min per IP. Signup: 10 / 15 min per IP. Create/edit: 5 / hour **per student** | Spam protection where it matters. Successful logins don't count, so real users and demo clicks are never locked out, while password guessing still is |
 | Do failed submissions count toward the limit? | No. Only successful submissions count (`skipFailedRequests`) | A typo or a 409 shouldn't use up a student's quota. The global limiter still caps spam |
 
 > **Rate-limit store:** the default store is in-memory. It resets on restart and isn't shared between server instances. With several instances in production, use a Redis store.
@@ -130,10 +133,10 @@ Blank values count as "not set". The server checks the env with zod at startup a
 
 ### Tests
 
-The backend has 31 API tests in [`backend/tests/`](backend/tests). They cover the rules that matter most:
+The backend has 52 API tests in [`backend/tests/`](backend/tests). They cover the rules that matter most:
 
 - duplicate repos → 409 (including `.git`, trailing `/`, uppercase, and two identical requests racing)
-- RBAC → 401 without a token, 403 for the wrong role, 403 when resubmitting someone else's project
+- RBAC → 401 without a token, 403 for the wrong role, 403 when editing or deleting someone else's project
 - two mentors reviewing the same submission at once → one 200, one 409, and only one feedback row
 - signup can never create a mentor, and login doesn't reveal whether an email exists
 - server-side filters, search, pagination and stats
@@ -161,7 +164,7 @@ browser ──► Next.js (:3000) ──/api/* rewrite──► Express (:5050) 
 ```
 
 - **Backend pattern:** `routes → controller → service → prisma`. Controllers handle HTTP. Services hold the business logic.
-- **AuthN vs AuthZ:** `authenticate` verifies the JWT (401). `authorize("MENTOR")` checks the role (403). Services also check ownership (a student can't resubmit someone else's project → 403).
+- **AuthN vs AuthZ:** `authenticate` verifies the JWT (401). `authorize("MENTOR")` checks the role (403). Services also check ownership (a student can't edit or delete someone else's project → 403).
 - **Validation:** zod schemas on the backend, mirrored on the frontend. Errors come back as `{ errors: { field: [messages] } }` and appear under the matching input.
 - **Frontend protection is only UX.** The real security is the backend middleware. Hiding a page is not access control.
 
@@ -222,11 +225,15 @@ Base URL: `/api`. Every success response is `{ success: true, message, data, met
 | GET | `/auth/me` | Logged in | — | 200 user | 401 |
 | POST | `/submissions` | STUDENT | `projectName, repoUrl, liveUrl, description` | 201 | 400, 401, 403, 409, 429 |
 | GET | `/submissions/me` | STUDENT | — | 200 list (with latest feedback) | 401, 403 |
-| PATCH | `/submissions/:id/resubmit` | STUDENT (owner) | same as create | 200 | 400, 403, 404, 409, 429 |
+| PATCH | `/submissions/:id` | STUDENT (owner) | same as create | 200 (REJECTED → PENDING) | 400, 403, 404, 409, 429 |
+| DELETE | `/submissions/:id` | STUDENT (owner) | — | 200 | 403, 404, 409 |
 | GET | `/mentor/stats` | MENTOR | — | 200 counts | 401, 403 |
 | GET | `/mentor/submissions` | MENTOR | `?page&limit&status&search&sort` | 200 items + `meta` | 400, 401, 403 |
 | GET | `/mentor/submissions/:id` | MENTOR | — | 200 submission + full review history | 401, 403, 404 |
-| PATCH | `/mentor/submissions/:id/review` | MENTOR | `decision` (`APPROVED`/`REJECTED`), `comment` | 200 | 400, 401, 403, 404, 409 |
+| PATCH | `/mentor/submissions/:id/review` | MENTOR | `decision` (`APPROVED`/`REJECTED`), `mark` (0–100, optional), `comment` (optional) | 200 | 400, 401, 403, 404, 409 |
+| PATCH | `/mentor/submissions/:id/grade` | MENTOR | `mark` (0–100), `comment` (optional, empty clears it) | 200 | 400, 401, 403, 404, 409 (still pending) |
+| GET | `/mentor/students` | MENTOR | `?page&limit&search` (name or email) | 200 items (`counts`, `averageMark`) + `meta` | 400, 401, 403 |
+| GET | `/mentor/students/:id` | MENTOR | — | 200 student + every submission with its latest review | 401, 403, 404 |
 
 Validation rules: the repo URL must be `https://github.com/<user>/<repo>`, the live URL must use `https://`, the description must be 20–1000 characters, and the password must be 8+ characters with an uppercase letter and a number.
 

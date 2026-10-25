@@ -12,7 +12,7 @@ const withLatestFeedback = {
   feedbacks: {
     orderBy: { createdAt: "desc" },
     take: 1,
-    select: { id: true, comment: true, decision: true, createdAt: true, mentor: { select: { name: true } } },
+    select: { id: true, comment: true, decision: true, mark: true, createdAt: true, mentor: { select: { name: true } } },
   },
 } as const;
 
@@ -37,13 +37,23 @@ export function getMySubmissions(studentId: string) {
   });
 }
 
-export async function resubmit(studentId: string, submissionId: string, data: CreateSubmissionInput) {
+/** Statuses a student may still change. An APPROVED project is final, so it's locked. */
+const EDITABLE = ["PENDING", "REJECTED"] as const;
+
+async function findOwned(studentId: string, submissionId: string) {
   const submission = await prisma.submission.findUnique({ where: { id: submissionId } });
   if (!submission) throw new AppError(404, "Submission not found");
-  if (submission.studentId !== studentId) throw new AppError(403, "You can only edit your own submissions");
-  if (submission.status !== "REJECTED") {
-    throw new AppError(400, "Only rejected submissions can be resubmitted");
-  }
+  if (submission.studentId !== studentId) throw new AppError(403, "You can only change your own submissions");
+  if (submission.status === "APPROVED") throw new AppError(409, "Approved submissions are locked");
+  return submission;
+}
+
+/**
+ * Edit a PENDING or REJECTED submission. A PENDING one stays in the queue with the new content;
+ * a REJECTED one goes back to PENDING (a resubmission) and its old reviews stay in the history.
+ */
+export async function updateSubmission(studentId: string, submissionId: string, data: CreateSubmissionInput) {
+  const submission = await findOwned(studentId, submissionId);
 
   const repoUrlKey = normalizeRepoUrl(data.repoUrl);
   if (repoUrlKey !== submission.repoUrlKey) {
@@ -51,12 +61,22 @@ export async function resubmit(studentId: string, submissionId: string, data: Cr
     if (taken) throw duplicateError();
   }
 
-  // Conditional update: guards against a double resubmit racing with itself.
+  // Conditional update: if a mentor approved it in the meantime, nothing matches → 409.
   const result = await prisma.submission.updateMany({
-    where: { id: submissionId, studentId, status: "REJECTED" },
+    where: { id: submissionId, studentId, status: { in: [...EDITABLE] } },
     data: { ...data, repoUrlKey, status: "PENDING", reviewedById: null, reviewedAt: null },
   });
-  if (result.count === 0) throw new AppError(409, "This submission was already resubmitted");
+  if (result.count === 0) throw new AppError(409, "This submission was just reviewed, refresh to see the result");
 
   return prisma.submission.findUnique({ where: { id: submissionId }, include: withLatestFeedback });
+}
+
+/** Delete a PENDING or REJECTED submission (its feedback rows cascade). Frees the repo URL again. */
+export async function deleteSubmission(studentId: string, submissionId: string) {
+  await findOwned(studentId, submissionId);
+
+  const result = await prisma.submission.deleteMany({
+    where: { id: submissionId, studentId, status: { in: [...EDITABLE] } },
+  });
+  if (result.count === 0) throw new AppError(409, "This submission was just reviewed, refresh to see the result");
 }

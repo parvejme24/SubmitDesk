@@ -4,7 +4,7 @@ import { authorize } from "../../middlewares/authorize.js";
 import { validate } from "../../middlewares/validate.js";
 import { idParamSchema } from "../submissions/submission.schema.js";
 import * as controller from "./review.controller.js";
-import { listQuerySchema, reviewSchema } from "./review.schema.js";
+import { gradeSchema, listQuerySchema, reviewSchema } from "./review.schema.js";
 
 export const reviewRoutes = Router();
 
@@ -18,4 +18,10 @@ reviewRoutes.patch(
   validate(idParamSchema, "params"),
   validate(reviewSchema),
   controller.review,
+);
+reviewRoutes.patch(
+  "/submissions/:id/grade",
+  validate(idParamSchema, "params"),
+  validate(gradeSchema),
+  controller.grade,
 );
