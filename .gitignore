@@ -7,3 +7,6 @@ dist
 .DS_Store
 
 ROADMAP.md
+
+# Vercel CLI project links and pulled env values
+.vercel

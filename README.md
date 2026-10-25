@@ -262,10 +262,12 @@ Run `npm run db:deploy` again whenever you add a migration.
 | Setting | Value |
 |---|---|
 | Root Directory | `backend` |
-| Framework Preset | Express (detected automatically) |
+| Framework Preset | **Other** (not Express, see below) |
 | Environment variables | `DATABASE_URL` (Neon pooled URL), `JWT_SECRET` (32+ chars), `JWT_EXPIRES_IN=1d` |
 
-Vercel runs the Express app as one function (`src/app.ts` default-exports it). `npm install` runs `prisma generate` through the `postinstall` script, and [`backend/vercel.json`](backend/vercel.json) pins the function to `cle1` (Cleveland), next to the Neon database in `us-east-2`. Change the region if your database is elsewhere. Check `https://<backend>.vercel.app/api/health` → `{ "ok": true }`.
+Vercel runs the Express app as one Node function: [`backend/api/index.ts`](backend/api/index.ts) re-exports the app, and [`backend/vercel.json`](backend/vercel.json) rewrites every request to it, runs `npm run build` (so `tsc` type errors still fail the deploy) and pins the function to `cle1` (Cleveland), next to the Neon database in `us-east-2`. `public/` only holds a `robots.txt`, because Vercel needs a non-empty output folder.
+
+Why not the Express preset? It type-checks ESM imports as if they were CommonJS, so dual-format packages like `helmet` and `express-rate-limit` fail with "This expression is not callable" even though the code compiles and runs fine. Change the region if your database is elsewhere. Check `https://<backend>.vercel.app/api/health` → `{ "ok": true }`.
 
 `CLIENT_URL` is optional: browsers never call the backend directly (everything goes through the frontend's `/api`), so CORS stays closed unless you set it.
 
