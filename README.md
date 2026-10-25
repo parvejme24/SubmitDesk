@@ -10,8 +10,8 @@ Students submit their projects (GitHub repo + live site). Mentors review them in
 
 | | URL |
 |---|---|
-| Frontend | _add after deploy_ |
-| Backend health | _add after deploy_ → `/api/health` |
+| Frontend | https://submitdesk-frontend.vercel.app |
+| Backend health | https://submitdesk-backend.vercel.app/api/health |
 
 ## Demo credentials
 
